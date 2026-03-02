@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Personal - Zayd Hotel</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <button class="lang-switcher" onclick="toggleLang()">EN</button>
+    <div class="app-container">
+        <nav class="sidebar" id="sidebar"></nav>
+
+        <div class="main-content">
+            <div class="page-header">
+                <h1>Personalverwaltung</h1>
+                <button class="btn btn-primary" onclick="openAddStaff()">+ Personal hinzuf&uuml;gen</button>
+            </div>
+
+            <div id="alert-box"></div>
+
+            <!-- Staff Table -->
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>E-Mail</th>
+                            <th>Telefon</th>
+                            <th>Beigetreten</th>
+                            <th>Aktionen</th>
+                        </tr>
+                    </thead>
+                    <tbody id="staff-table">
+                        <tr><td colspan="5" class="no-data">Personal wird geladen...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add/Edit Staff Modal -->
+    <div class="modal-overlay" id="staff-modal">
+        <div class="modal">
+            <div class="modal-header">
+                <h2 id="staff-modal-title">Mitarbeiter hinzuf&uuml;gen</h2>
+                <button class="modal-close" onclick="closeModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="staff-form">
+                    <input type="hidden" id="staff-id">
+                    <div class="form-group">
+                        <label for="staff-name">Vollst&auml;ndiger Name</label>
+                        <input type="text" id="staff-name" placeholder="Name eingeben" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="staff-email">E-Mail</label>
+                        <input type="email" id="staff-email" placeholder="E-Mail eingeben" required>
+                    </div>
+                    <div class="form-group" id="password-group">
+                        <label for="staff-password">Passwort</label>
+                        <input type="password" id="staff-password" placeholder="Passwort eingeben">
+                    </div>
+                    <div class="form-group">
+                        <label for="staff-phone">Telefon</label>
+                        <input type="text" id="staff-phone" placeholder="Telefonnummer">
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal()">Abbrechen</button>
+                <button class="btn btn-primary" onclick="saveStaff()">Speichern</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="/js/main.js"></script>
+    <script>
+        requireAuth(['admin']);
+        loadSidebar('staff');
+
+        async function loadStaff() {
+            try {
+                const staff = await apiRequest('/api/staff');
+                const tbody = document.getElementById('staff-table');
+
+                if (staff.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="5" class="no-data">Keine Mitarbeiter gefunden</td></tr>';
+                    return;
+                }
+
+                tbody.innerHTML = staff.map(function(s) {
+                    return '<tr>' +
+                        '<td>' + s.name + '</td>' +
+                        '<td>' + s.email + '</td>' +
+                        '<td>' + (s.phone || '-') + '</td>' +
+                        '<td>' + formatDate(s.createdAt) + '</td>' +
+                        '<td class="actions-cell">' +
+                            '<button class="btn btn-warning btn-sm" onclick="editStaff(\'' + s._id + '\')">Bearbeiten</button> ' +
+                            '<button class="btn btn-danger btn-sm" onclick="deleteStaff(\'' + s._id + '\')">L\u00f6schen</button>' +
+                        '</td>' +
+                    '</tr>';
+                }).join('');
+            } catch (err) {
+                showAlert('Personal konnte nicht geladen werden', 'error');
+            }
+        }
+
+        function openAddStaff() {
+            document.getElementById('staff-modal-title').textContent = 'Mitarbeiter hinzuf\u00fcgen';
+            document.getElementById('staff-form').reset();
+            document.getElementById('staff-id').value = '';
+            document.getElementById('staff-password').required = true;
+            document.getElementById('staff-password').placeholder = 'Passwort eingeben';
+            document.getElementById('staff-modal').classList.add('show');
+        }
+
+        async function editStaff(id) {
+            try {
+                const staff = await apiRequest('/api/staff/' + id);
+                document.getElementById('staff-modal-title').textContent = 'Mitarbeiter bearbeiten';
+                document.getElementById('staff-id').value = staff._id;
+                document.getElementById('staff-name').value = staff.name;
+                document.getElementById('staff-email').value = staff.email;
+                document.getElementById('staff-phone').value = staff.phone || '';
+                document.getElementById('staff-password').value = '';
+                document.getElementById('staff-password').required = false;
+                document.getElementById('staff-password').placeholder = 'Leer lassen um aktuelles zu behalten';
+                document.getElementById('staff-modal').classList.add('show');
+            } catch (err) {
+                showAlert('Mitarbeiter konnte nicht geladen werden', 'error');
+            }
+        }
+
+        async function saveStaff() {
+            const id = document.getElementById('staff-id').value;
+            const name = document.getElementById('staff-name').value;
+            const email = document.getElementById('staff-email').value;
+            const password = document.getElementById('staff-password').value;
+            const phone = document.getElementById('staff-phone').value;
+
+            if (!name || !email) {
+                showAlert('Name und E-Mail sind erforderlich', 'error');
+                return;
+            }
+
+            if (!id && !password) {
+                showAlert('Passwort ist f\u00fcr neue Mitarbeiter erforderlich', 'error');
+                return;
+            }
+
+            try {
+                const body = { name, email, phone };
+                if (password) body.password = password;
+
+                if (id) {
+                    await apiRequest('/api/staff/' + id, 'PUT', body);
+                    showAlert('Mitarbeiter aktualisiert', 'success');
+                } else {
+                    await apiRequest('/api/staff', 'POST', body);
+                    showAlert('Mitarbeiter erstellt', 'success');
+                }
+
+                closeModal();
+                loadStaff();
+            } catch (err) {
+                showAlert(err.message || 'Mitarbeiter konnte nicht gespeichert werden', 'error');
+            }
+        }
+
+        async function deleteStaff(id) {
+            if (!confirm('Sind Sie sicher, dass Sie diesen Mitarbeiter l\u00f6schen m\u00f6chten?')) return;
+            try {
+                await apiRequest('/api/staff/' + id, 'DELETE');
+                showAlert('Mitarbeiter gel\u00f6scht', 'success');
+                loadStaff();
+            } catch (err) {
+                showAlert('Mitarbeiter konnte nicht gel\u00f6scht werden', 'error');
+            }
+        }
+
+        function closeModal() {
+            document.getElementById('staff-modal').classList.remove('show');
+        }
+
+        loadStaff();
+    </script>
+</body>
+</html>

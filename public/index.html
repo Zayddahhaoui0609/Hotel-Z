@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Zayd Hotel - Anmeldung</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <!-- Language Switcher -->
+    <button class="lang-switcher" id="lang-btn" onclick="toggleLang()">EN</button>
+
+    <div class="login-container">
+        <!-- Left side - Video Hero -->
+        <div class="login-hero">
+            <video autoplay muted loop playsinline>
+                <source src="https://videos.pexels.com/video-files/3773486/3773486-uhd_2560_1440_30fps.mp4" type="video/mp4">
+            </video>
+            <div class="hero-overlay">
+                <h1>Zayd Hotel</h1>
+                <p id="hero-tagline">Luxus, Komfort &amp; unvergessliche Aufenthalte</p>
+                <div class="hero-stars">&#9733; &#9733; &#9733; &#9733; &#9733;</div>
+            </div>
+        </div>
+
+        <!-- Right side - Login Form -->
+        <div class="login-form-side">
+            <div class="login-box">
+                <div id="alert-box"></div>
+
+                <div id="login-form-container">
+                    <h2 id="lbl-welcome">Willkommen</h2>
+                    <p class="subtitle" id="lbl-signin-sub">Melden Sie sich in Ihrem Konto an</p>
+                    <form id="login-form">
+                        <div class="form-group">
+                            <label for="email" id="lbl-email">E-Mail</label>
+                            <input type="email" id="email" placeholder="Ihre E-Mail-Adresse" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="password" id="lbl-pass">Passwort</label>
+                            <input type="password" id="password" placeholder="Ihr Passwort" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary btn-full" id="btn-login">Anmelden</button>
+                    </form>
+                    <p style="text-align:center; margin-top:15px; font-size:13px; color:#888;">
+                        <span id="lbl-no-account">Noch kein Konto?</span> <a href="#" id="show-register" style="color:#0f3460;" id="lbl-register-link">Registrieren</a>
+                    </p>
+
+                    <!-- Demo Credentials Panel -->
+                    <div style="margin-top:20px; text-align:center;">
+                        <button type="button" class="btn-demo-toggle" id="demo-toggle-btn" onclick="toggleDemo()">
+                            &#128274; <span id="lbl-demo-btn">Demo-Zugangsdaten anzeigen</span>
+                        </button>
+                    </div>
+                    <div id="demo-panel" style="display:none; margin-top:15px;">
+                        <div class="demo-credentials">
+                            <div class="demo-section">
+                                <div class="demo-role admin-role" id="lbl-role-admin">Administrator</div>
+                                <div class="demo-item" onclick="fillLogin('admin@zaydhotel.com','admin123')">
+                                    <span class="demo-label" id="lbl-email-s">E-Mail:</span> admin@zaydhotel.com<br>
+                                    <span class="demo-label" id="lbl-pass-s">Passwort:</span> admin123
+                                </div>
+                            </div>
+                            <div class="demo-section">
+                                <div class="demo-role staff-role" id="lbl-role-staff">Mitarbeiter</div>
+                                <div class="demo-item" onclick="fillLogin('anna@zaydhotel.com','staff123')">
+                                    <span>Anna Weber</span><br>
+                                    anna@zaydhotel.com / staff123
+                                </div>
+                                <div class="demo-item" onclick="fillLogin('thomas@zaydhotel.com','staff123')">
+                                    <span>Thomas Fischer</span><br>
+                                    thomas@zaydhotel.com / staff123
+                                </div>
+                            </div>
+                            <div class="demo-section">
+                                <div class="demo-role customer-role" id="lbl-role-customer">Kunden</div>
+                                <div class="demo-item" onclick="fillLogin('alice@example.com','customer123')">Alice Johnson — alice@example.com</div>
+                                <div class="demo-item" onclick="fillLogin('bob@example.com','customer123')">Bob Smith — bob@example.com</div>
+                                <div class="demo-item" onclick="fillLogin('maria@example.com','customer123')">Maria Schmidt — maria@example.com</div>
+                                <div class="demo-item" onclick="fillLogin('hans@example.com','customer123')">Hans Mueller — hans@example.com</div>
+                                <div class="demo-item" onclick="fillLogin('sophie@example.com','customer123')">Sophie Laurent — sophie@example.com</div>
+                                <div class="demo-item" onclick="fillLogin('marco@example.com','customer123')">Marco Rossi — marco@example.com</div>
+                                <div class="demo-item" onclick="fillLogin('emma@example.com','customer123')">Emma Wilson — emma@example.com</div>
+                                <div class="demo-item" onclick="fillLogin('yuki@example.com','customer123')">Yuki Tanaka — yuki@example.com</div>
+                                <div class="demo-item" onclick="fillLogin('carlos@example.com','customer123')">Carlos Garcia — carlos@example.com</div>
+                                <div class="demo-item" onclick="fillLogin('lena@example.com','customer123')">Lena Braun — lena@example.com</div>
+                                <div class="demo-item" onclick="fillLogin('david@example.com','customer123')">David Kim — david@example.com</div>
+                                <div class="demo-item" onclick="fillLogin('fatima@example.com','customer123')">Fatima Al-Hassan — fatima@example.com</div>
+                                <p style="font-size:11px; color:#aaa; margin-top:6px;" id="lbl-all-pass">Alle Kunden: Passwort <strong>customer123</strong></p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="register-form-container" style="display:none;">
+                    <h2 id="lbl-register">Registrieren</h2>
+                    <p class="subtitle" id="lbl-register-sub">Erstellen Sie ein neues Konto</p>
+                    <form id="register-form">
+                        <div class="form-group">
+                            <label for="reg-name" id="lbl-fullname">Vollst&auml;ndiger Name</label>
+                            <input type="text" id="reg-name" placeholder="Vor- und Nachname" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="reg-email" id="lbl-reg-email">E-Mail</label>
+                            <input type="email" id="reg-email" placeholder="Ihre E-Mail-Adresse" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="reg-password" id="lbl-reg-pass">Passwort</label>
+                            <input type="password" id="reg-password" placeholder="Passwort erstellen" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="reg-phone" id="lbl-phone">Telefon</label>
+                            <input type="text" id="reg-phone" placeholder="Telefonnummer">
+                        </div>
+                        <div class="form-group">
+                            <label for="reg-id" id="lbl-idnum">Ausweis- / Passnummer</label>
+                            <input type="text" id="reg-id" placeholder="Ausweis- oder Passnummer">
+                        </div>
+                        <button type="submit" class="btn btn-primary btn-full" id="btn-register">Registrieren</button>
+                    </form>
+                    <p style="text-align:center; margin-top:15px; font-size:13px; color:#888;">
+                        <span id="lbl-have-account">Bereits ein Konto?</span> <a href="#" id="show-login" style="color:#0f3460;">Anmelden</a>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        var token = localStorage.getItem('token');
+        if (token) { window.location.href = '/dashboard.html'; }
+
+        var currentLang = localStorage.getItem('lang') || 'de';
+
+        var translations = {
+            de: {
+                title: 'Zayd Hotel - Anmeldung',
+                tagline: 'Luxus, Komfort & unvergessliche Aufenthalte',
+                welcome: 'Willkommen',
+                signinSub: 'Melden Sie sich in Ihrem Konto an',
+                email: 'E-Mail',
+                pass: 'Passwort',
+                btnLogin: 'Anmelden',
+                noAccount: 'Noch kein Konto?',
+                demoBtn: 'Demo-Zugangsdaten anzeigen',
+                roleAdmin: 'Administrator',
+                roleStaff: 'Mitarbeiter',
+                roleCustomer: 'Kunden',
+                allPass: 'Alle Kunden: Passwort customer123',
+                register: 'Registrieren',
+                registerSub: 'Erstellen Sie ein neues Konto',
+                fullname: 'Vollständiger Name',
+                phone: 'Telefon',
+                idnum: 'Ausweis- / Passnummer',
+                btnRegister: 'Registrieren',
+                haveAccount: 'Bereits ein Konto?',
+                langBtn: 'EN',
+                successReg: 'Registrierung erfolgreich! Bitte melden Sie sich an.',
+                errGeneral: 'Etwas ist schiefgelaufen. Versuchen Sie es erneut.'
+            },
+            en: {
+                title: 'Zayd Hotel - Login',
+                tagline: 'Luxury, Comfort & Unforgettable Stays',
+                welcome: 'Welcome',
+                signinSub: 'Sign in to your account',
+                email: 'Email',
+                pass: 'Password',
+                btnLogin: 'Login',
+                noAccount: "Don't have an account?",
+                demoBtn: 'Show Demo Credentials',
+                roleAdmin: 'Administrator',
+                roleStaff: 'Staff',
+                roleCustomer: 'Customers',
+                allPass: 'All customers: password customer123',
+                register: 'Register',
+                registerSub: 'Create a new account',
+                fullname: 'Full Name',
+                phone: 'Phone',
+                idnum: 'ID / Passport Number',
+                btnRegister: 'Register',
+                haveAccount: 'Already have an account?',
+                langBtn: 'DE',
+                successReg: 'Registration successful! Please log in.',
+                errGeneral: 'Something went wrong. Please try again.'
+            }
+        };
+
+        function applyLang(lang) {
+            var t = translations[lang];
+            document.documentElement.lang = lang;
+            document.title = t.title;
+            document.getElementById('hero-tagline').textContent = t.tagline;
+            document.getElementById('lbl-welcome').textContent = t.welcome;
+            document.getElementById('lbl-signin-sub').textContent = t.signinSub;
+            document.getElementById('lbl-email').textContent = t.email;
+            document.getElementById('lbl-pass').textContent = t.pass;
+            document.getElementById('btn-login').textContent = t.btnLogin;
+            document.getElementById('lbl-no-account').textContent = t.noAccount;
+            document.getElementById('lbl-demo-btn').textContent = t.demoBtn;
+            document.getElementById('lbl-role-admin').textContent = t.roleAdmin;
+            document.getElementById('lbl-role-staff').textContent = t.roleStaff;
+            document.getElementById('lbl-role-customer').textContent = t.roleCustomer;
+            document.getElementById('lbl-all-pass').innerHTML = t.allPass;
+            document.getElementById('lbl-register').textContent = t.register;
+            document.getElementById('lbl-register-sub').textContent = t.registerSub;
+            document.getElementById('lbl-fullname').textContent = t.fullname;
+            document.getElementById('lbl-reg-email').textContent = t.email;
+            document.getElementById('lbl-reg-pass').textContent = t.pass;
+            document.getElementById('lbl-phone').textContent = t.phone;
+            document.getElementById('lbl-idnum').textContent = t.idnum;
+            document.getElementById('btn-register').textContent = t.btnRegister;
+            document.getElementById('lbl-have-account').textContent = t.haveAccount;
+            document.getElementById('lang-btn').textContent = t.langBtn;
+        }
+
+        function toggleLang() {
+            currentLang = currentLang === 'de' ? 'en' : 'de';
+            localStorage.setItem('lang', currentLang);
+            applyLang(currentLang);
+        }
+
+        function toggleDemo() {
+            var panel = document.getElementById('demo-panel');
+            panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+        }
+
+        function fillLogin(email, password) {
+            document.getElementById('login-form-container').style.display = 'block';
+            document.getElementById('register-form-container').style.display = 'none';
+            document.getElementById('email').value = email;
+            document.getElementById('password').value = password;
+            document.getElementById('demo-panel').style.display = 'none';
+        }
+
+        document.getElementById('show-register').addEventListener('click', function(e) {
+            e.preventDefault();
+            document.getElementById('login-form-container').style.display = 'none';
+            document.getElementById('register-form-container').style.display = 'block';
+            document.getElementById('alert-box').innerHTML = '';
+        });
+
+        document.getElementById('show-login').addEventListener('click', function(e) {
+            e.preventDefault();
+            document.getElementById('register-form-container').style.display = 'none';
+            document.getElementById('login-form-container').style.display = 'block';
+            document.getElementById('alert-box').innerHTML = '';
+        });
+
+        function showAlert(message, type) {
+            document.getElementById('alert-box').innerHTML =
+                '<div class="alert alert-' + type + '">' + message + '</div>';
+        }
+
+        document.getElementById('login-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            var email = document.getElementById('email').value;
+            var password = document.getElementById('password').value;
+            try {
+                var res = await fetch('/api/auth/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password })
+                });
+                var data = await res.json();
+                if (res.ok) {
+                    localStorage.setItem('token', data.token);
+                    localStorage.setItem('user', JSON.stringify(data.user));
+                    window.location.href = '/dashboard.html';
+                } else {
+                    showAlert(data.message, 'error');
+                }
+            } catch (err) {
+                showAlert(translations[currentLang].errGeneral, 'error');
+            }
+        });
+
+        document.getElementById('register-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            var name = document.getElementById('reg-name').value;
+            var email = document.getElementById('reg-email').value;
+            var password = document.getElementById('reg-password').value;
+            var phone = document.getElementById('reg-phone').value;
+            var idNumber = document.getElementById('reg-id').value;
+            try {
+                var res = await fetch('/api/auth/register', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name, email, password, phone, idNumber })
+                });
+                var data = await res.json();
+                if (res.ok) {
+                    showAlert(translations[currentLang].successReg, 'success');
+                    document.getElementById('register-form-container').style.display = 'none';
+                    document.getElementById('login-form-container').style.display = 'block';
+                } else {
+                    showAlert(data.message, 'error');
+                }
+            } catch (err) {
+                showAlert(translations[currentLang].errGeneral, 'error');
+            }
+        });
+
+        applyLang(currentLang);
+    </script>
+</body>
+</html>

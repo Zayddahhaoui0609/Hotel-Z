@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Zimmer - Zayd Hotel</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <button class="lang-switcher" onclick="toggleLang()">EN</button>
+    <div class="app-container">
+        <nav class="sidebar" id="sidebar"></nav>
+
+        <div class="main-content">
+            <div class="page-header">
+                <h1>Zimmerverwaltung</h1>
+                <button class="btn btn-primary" onclick="openAddRoom()" id="add-room-btn">+ Zimmer hinzuf&uuml;gen</button>
+            </div>
+
+            <div id="alert-box"></div>
+
+            <!-- Filters -->
+            <div class="filter-bar">
+                <select id="filter-type" onchange="loadRooms()">
+                    <option value="">Alle Typen</option>
+                    <option value="Single">Single</option>
+                    <option value="Double">Double</option>
+                    <option value="Suite">Suite</option>
+                    <option value="Deluxe">Deluxe</option>
+                </select>
+                <select id="filter-status" onchange="loadRooms()">
+                    <option value="">Alle Status</option>
+                    <option value="Available">Verf&uuml;gbar</option>
+                    <option value="Occupied">Belegt</option>
+                    <option value="Maintenance">Wartung</option>
+                </select>
+            </div>
+
+            <!-- Rooms Table -->
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Zimmer Nr.</th>
+                            <th>Typ</th>
+                            <th>Preis/Nacht</th>
+                            <th>Ausstattung</th>
+                            <th>Status</th>
+                            <th>Aktionen</th>
+                        </tr>
+                    </thead>
+                    <tbody id="rooms-table">
+                        <tr><td colspan="6" class="no-data">Zimmer werden geladen...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add/Edit Room Modal -->
+    <div class="modal-overlay" id="room-modal">
+        <div class="modal">
+            <div class="modal-header">
+                <h2 id="modal-title">Zimmer hinzuf&uuml;gen</h2>
+                <button class="modal-close" onclick="closeModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="room-form">
+                    <input type="hidden" id="room-id">
+                    <div class="form-group">
+                        <label for="room-number">Zimmernummer</label>
+                        <input type="text" id="room-number" placeholder="z.B. 101" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="room-type">Zimmertyp</label>
+                        <select id="room-type" required>
+                            <option value="">Typ w&auml;hlen</option>
+                            <option value="Single">Single</option>
+                            <option value="Double">Double</option>
+                            <option value="Suite">Suite</option>
+                            <option value="Deluxe">Deluxe</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="room-price">Preis pro Nacht ($)</label>
+                        <input type="number" id="room-price" placeholder="z.B. 100" min="1" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Ausstattung</label>
+                        <div class="checkbox-group">
+                            <label><input type="checkbox" value="Wi-Fi"> Wi-Fi</label>
+                            <label><input type="checkbox" value="TV"> TV</label>
+                            <label><input type="checkbox" value="AC"> Klimaanlage</label>
+                            <label><input type="checkbox" value="Balcony"> Balkon</label>
+                            <label><input type="checkbox" value="Mini Bar"> Minibar</label>
+                            <label><input type="checkbox" value="Safe"> Safe</label>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="room-status">Status</label>
+                        <select id="room-status">
+                            <option value="Available">Verf&uuml;gbar</option>
+                            <option value="Occupied">Belegt</option>
+                            <option value="Maintenance">Wartung</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="room-desc">Beschreibung</label>
+                        <textarea id="room-desc" rows="3" placeholder="Optionale Beschreibung"></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal()">Abbrechen</button>
+                <button class="btn btn-primary" onclick="saveRoom()">Speichern</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="/js/main.js"></script>
+    <script>
+        requireAuth();
+        loadSidebar('rooms');
+
+        const user = JSON.parse(localStorage.getItem('user'));
+
+        // Hide add button for non-admin
+        if (user.role !== 'admin') {
+            document.getElementById('add-room-btn').style.display = 'none';
+        }
+
+        async function loadRooms() {
+            try {
+                let url = '/api/rooms?';
+                const type = document.getElementById('filter-type').value;
+                const status = document.getElementById('filter-status').value;
+                if (type) url += 'type=' + type + '&';
+                if (status) url += 'status=' + status + '&';
+
+                const rooms = await apiRequest(url);
+                const tbody = document.getElementById('rooms-table');
+
+                if (rooms.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="6" class="no-data">Keine Zimmer gefunden</td></tr>';
+                    return;
+                }
+
+                tbody.innerHTML = rooms.map(function(room) {
+                    let statusBadge = 'badge-green';
+                    if (room.status === 'Occupied') statusBadge = 'badge-red';
+                    if (room.status === 'Maintenance') statusBadge = 'badge-yellow';
+
+                    let actions = '';
+                    if (user.role === 'admin') {
+                        actions = '<button class="btn btn-warning btn-sm" onclick="editRoom(\'' + room._id + '\')">Bearbeiten</button>' +
+                                  '<button class="btn btn-danger btn-sm" onclick="deleteRoom(\'' + room._id + '\')">L\u00f6schen</button>';
+                    }
+
+                    return '<tr>' +
+                        '<td>' + room.number + '</td>' +
+                        '<td>' + room.type + '</td>' +
+                        '<td>$' + room.price + '</td>' +
+                        '<td>' + (room.features.join(', ') || '-') + '</td>' +
+                        '<td><span class="badge ' + statusBadge + '">' + room.status + '</span></td>' +
+                        '<td class="actions-cell">' + actions + '</td>' +
+                    '</tr>';
+                }).join('');
+            } catch (err) {
+                showAlert('Zimmer konnten nicht geladen werden', 'error');
+            }
+        }
+
+        function openAddRoom() {
+            document.getElementById('modal-title').textContent = 'Zimmer hinzuf\u00fcgen';
+            document.getElementById('room-form').reset();
+            document.getElementById('room-id').value = '';
+            document.getElementById('room-modal').classList.add('show');
+        }
+
+        async function editRoom(id) {
+            try {
+                const room = await apiRequest('/api/rooms/' + id);
+                document.getElementById('modal-title').textContent = 'Zimmer bearbeiten';
+                document.getElementById('room-id').value = room._id;
+                document.getElementById('room-number').value = room.number;
+                document.getElementById('room-type').value = room.type;
+                document.getElementById('room-price').value = room.price;
+                document.getElementById('room-status').value = room.status;
+                document.getElementById('room-desc').value = room.description || '';
+
+                // Set checkboxes
+                const checkboxes = document.querySelectorAll('.checkbox-group input');
+                checkboxes.forEach(function(cb) {
+                    cb.checked = room.features.includes(cb.value);
+                });
+
+                document.getElementById('room-modal').classList.add('show');
+            } catch (err) {
+                showAlert('Zimmerdetails konnten nicht geladen werden', 'error');
+            }
+        }
+
+        async function saveRoom() {
+            const id = document.getElementById('room-id').value;
+            const number = document.getElementById('room-number').value;
+            const type = document.getElementById('room-type').value;
+            const price = document.getElementById('room-price').value;
+            const status = document.getElementById('room-status').value;
+            const description = document.getElementById('room-desc').value;
+
+            // Get selected features
+            const features = [];
+            document.querySelectorAll('.checkbox-group input:checked').forEach(function(cb) {
+                features.push(cb.value);
+            });
+
+            if (!number || !type || !price) {
+                showAlert('Bitte f\u00fcllen Sie alle Pflichtfelder aus', 'error');
+                return;
+            }
+
+            try {
+                const body = { number, type, price: Number(price), features, status, description };
+
+                if (id) {
+                    await apiRequest('/api/rooms/' + id, 'PUT', body);
+                    showAlert('Zimmer erfolgreich aktualisiert', 'success');
+                } else {
+                    await apiRequest('/api/rooms', 'POST', body);
+                    showAlert('Zimmer erfolgreich erstellt', 'success');
+                }
+
+                closeModal();
+                loadRooms();
+            } catch (err) {
+                showAlert(err.message || 'Zimmer konnte nicht gespeichert werden', 'error');
+            }
+        }
+
+        async function deleteRoom(id) {
+            if (!confirm('Sind Sie sicher, dass Sie dieses Zimmer l\u00f6schen m\u00f6chten?')) return;
+            try {
+                await apiRequest('/api/rooms/' + id, 'DELETE');
+                showAlert('Zimmer gel\u00f6scht', 'success');
+                loadRooms();
+            } catch (err) {
+                showAlert('Zimmer konnte nicht gel\u00f6scht werden', 'error');
+            }
+        }
+
+        function closeModal() {
+            document.getElementById('room-modal').classList.remove('show');
+        }
+
+        loadRooms();
+    </script>
+</body>
+</html>

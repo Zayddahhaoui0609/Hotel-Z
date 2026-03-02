@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Zayd Hotel</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <button class="lang-switcher" id="lang-btn" onclick="toggleLang()">EN</button>
+
+    <div class="app-container">
+        <nav class="sidebar" id="sidebar"></nav>
+
+        <div class="main-content">
+            <div id="alert-box"></div>
+
+            <!-- ADMIN / STAFF DASHBOARD -->
+            <div id="admin-dashboard" style="display:none;">
+                <div class="page-header">
+                    <div>
+                        <h1 id="lbl-dashboard-title">Dashboard</h1>
+                        <span id="welcome-text" style="color:#666;font-size:14px;"></span>
+                    </div>
+                    <span class="live-indicator">
+                        <span class="live-dot"></span>
+                        <span id="lbl-live">LIVE</span>
+                    </span>
+                </div>
+
+                <div class="stats-grid">
+                    <div class="stat-card blue">
+                        <h3 id="lbl-total-rooms">Zimmer gesamt</h3>
+                        <div class="stat-value" id="total-rooms">0</div>
+                    </div>
+                    <div class="stat-card green">
+                        <h3 id="lbl-available">Verf&uuml;gbar</h3>
+                        <div class="stat-value" id="available-rooms">0</div>
+                    </div>
+                    <div class="stat-card orange">
+                        <h3 id="lbl-occupied">Belegt</h3>
+                        <div class="stat-value" id="occupied-rooms">0</div>
+                    </div>
+                    <div class="stat-card red">
+                        <h3 id="lbl-occupancy">Auslastung</h3>
+                        <div class="stat-value" id="occupancy-rate">0%</div>
+                    </div>
+                </div>
+
+                <div class="stats-grid">
+                    <div class="stat-card blue">
+                        <h3 id="lbl-total-bookings">Buchungen gesamt</h3>
+                        <div class="stat-value" id="total-bookings">0</div>
+                    </div>
+                    <div class="stat-card green">
+                        <h3 id="lbl-active-bookings">Aktive Buchungen</h3>
+                        <div class="stat-value" id="active-bookings">0</div>
+                    </div>
+                    <div class="stat-card orange">
+                        <h3 id="lbl-revenue">Gesamtumsatz</h3>
+                        <div class="stat-value" id="total-revenue">$0</div>
+                    </div>
+                    <div class="stat-card red">
+                        <h3 id="lbl-maintenance">Wartung</h3>
+                        <div class="stat-value" id="maintenance-rooms">0</div>
+                    </div>
+                </div>
+
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:20px; margin-bottom:20px;">
+                    <div class="table-container">
+                        <h2 id="lbl-checkins-today">Heutige Check-ins</h2>
+                        <ul class="activity-feed" id="today-checkins">
+                            <li><span class="no-data" id="lbl-no-checkins">Keine Check-ins heute</span></li>
+                        </ul>
+                    </div>
+                    <div class="table-container">
+                        <h2 id="lbl-checkouts-today">Heutige Check-outs</h2>
+                        <ul class="activity-feed" id="today-checkouts">
+                            <li><span class="no-data" id="lbl-no-checkouts">Keine Check-outs heute</span></li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Live Activity Feed -->
+                <div class="table-container">
+                    <h2 style="margin-bottom:12px;">
+                        <span id="lbl-live-feed">Live-Aktivit&auml;ten</span>
+                        <span class="live-indicator"><span class="live-dot"></span></span>
+                    </h2>
+                    <ul class="activity-feed" id="live-feed">
+                        <li><span class="feed-icon">&#128336;</span><span id="lbl-loading-feed">System wird gestartet...</span></li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- CUSTOMER DASHBOARD -->
+            <div id="customer-dashboard" style="display:none;">
+                <div class="customer-welcome">
+                    <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:10px;">
+                        <div>
+                            <h1 id="customer-greeting">Willkommen</h1>
+                            <p id="lbl-customer-sub">Hier sehen Sie Ihre Buchungen und Zimmerinformationen</p>
+                        </div>
+                        <div style="text-align:right;">
+                            <div style="font-size:12px; opacity:0.7; margin-bottom:4px;" id="lbl-your-balance">Ihr Guthaben</div>
+                            <div class="balance-badge" id="customer-balance">$0</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="customer-bookings">
+                    <p class="no-data" id="lbl-loading-bookings">Buchungen werden geladen...</p>
+                </div>
+
+                <div class="upgrade-section" id="upgrade-section">
+                    <h2 id="lbl-upgrade-title">Zimmer-Upgrade</h2>
+                    <p style="color:#666; font-size:14px; margin-bottom:15px;" id="lbl-upgrade-sub">
+                        M&ouml;chten Sie ein besseres Zimmer? W&auml;hlen Sie eine Option und das Guthaben wird automatisch abgezogen.
+                    </p>
+                    <div class="upgrade-cards" id="upgrade-cards">
+                        <p class="no-data">Wird geladen...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/js/main.js"></script>
+    <script>
+        requireAuth();
+
+        var currentLang = localStorage.getItem('lang') || 'de';
+        var user = JSON.parse(localStorage.getItem('user'));
+        var customerBalance = 0;
+        var activeBookingId = null;
+        var activeBookingRoomId = null;
+        var activeBookingNights = 0;
+
+        var T = {
+            de: {
+                langBtn: 'EN',
+                dashTitle: 'Dashboard',
+                live: 'LIVE',
+                totalRooms: 'Zimmer gesamt',
+                available: 'Verf\u00fcgbar',
+                occupied: 'Belegt',
+                occupancy: 'Auslastung',
+                totalBookings: 'Buchungen gesamt',
+                activeBookings: 'Aktive Buchungen',
+                revenue: 'Gesamtumsatz',
+                maintenance: 'Wartung',
+                checkinsToday: 'Heutige Check-ins',
+                checkoutsToday: 'Heutige Check-outs',
+                noCheckins: 'Keine Check-ins heute',
+                noCheckouts: 'Keine Check-outs heute',
+                liveFeed: 'Live-Aktivit\u00e4ten',
+                loadingFeed: 'System wird gestartet...',
+                yourBalance: 'Ihr Guthaben',
+                customerSub: 'Hier sehen Sie Ihre Buchungen und Zimmerinformationen',
+                loadingBookings: 'Buchungen werden geladen...',
+                upgradeTitle: 'Zimmer-Upgrade',
+                upgradeSub: 'M\u00f6chten Sie ein besseres Zimmer? W\u00e4hlen Sie eine Option und das Guthaben wird automatisch abgezogen.',
+                noBookings: 'Sie haben noch keine Buchungen.',
+                noRooms: 'Derzeit keine Zimmer verf\u00fcgbar',
+                perNight: '/ Nacht',
+                room: 'Zimmer',
+                checkin: 'Check-in',
+                checkout: 'Check-out',
+                total: 'Gesamtpreis',
+                payment: 'Zahlung',
+                features: 'Zimmerausstattung',
+                noFeatures: 'Keine Angaben',
+                confirmed: 'Best\u00e4tigt',
+                checkedIn: 'Eingecheckt',
+                checkedOut: 'Ausgecheckt',
+                cancelled: 'Storniert',
+                upgradeBtn: 'Dieses Zimmer buchen',
+                currentRoom: 'Aktuelles Zimmer',
+                costNote: 'Kosten: $',
+                notEnough: 'Nicht genug Guthaben',
+                upgradeSuccess: 'Zimmer erfolgreich gewechselt!',
+                newBalance: 'Neues Guthaben: $',
+                upgradeFree: 'Kein Aufpreis',
+                welcomePrefix: 'Willkommen, ',
+                sidebarDash: 'Dashboard',
+                sidebarRooms: 'Zimmer',
+                sidebarBookings: 'Buchungen',
+                sidebarCustomers: 'Kunden',
+                sidebarStaff: 'Personal',
+                logout: 'Abmelden',
+                feedCheckin: 'eingecheckt',
+                feedCheckout: 'ausgecheckt',
+                feedConfirmed: 'neue Buchung'
+            },
+            en: {
+                langBtn: 'DE',
+                dashTitle: 'Dashboard',
+                live: 'LIVE',
+                totalRooms: 'Total Rooms',
+                available: 'Available',
+                occupied: 'Occupied',
+                occupancy: 'Occupancy',
+                totalBookings: 'Total Bookings',
+                activeBookings: 'Active Bookings',
+                revenue: 'Total Revenue',
+                maintenance: 'Maintenance',
+                checkinsToday: "Today's Check-ins",
+                checkoutsToday: "Today's Check-outs",
+                noCheckins: 'No check-ins today',
+                noCheckouts: 'No check-outs today',
+                liveFeed: 'Live Activity',
+                loadingFeed: 'System starting...',
+                yourBalance: 'Your Balance',
+                customerSub: 'View your bookings and room information',
+                loadingBookings: 'Loading bookings...',
+                upgradeTitle: 'Room Upgrade',
+                upgradeSub: 'Want a better room? Select an option and the cost will be deducted from your balance.',
+                noBookings: 'You have no bookings yet.',
+                noRooms: 'No rooms available',
+                perNight: '/ night',
+                room: 'Room',
+                checkin: 'Check-in',
+                checkout: 'Check-out',
+                total: 'Total Price',
+                payment: 'Payment',
+                features: 'Room Features',
+                noFeatures: 'None listed',
+                confirmed: 'Confirmed',
+                checkedIn: 'Checked-in',
+                checkedOut: 'Checked-out',
+                cancelled: 'Cancelled',
+                upgradeBtn: 'Select this room',
+                currentRoom: 'Current Room',
+                costNote: 'Cost: $',
+                notEnough: 'Insufficient balance',
+                upgradeSuccess: 'Room upgraded successfully!',
+                newBalance: 'New balance: $',
+                upgradeFree: 'No extra cost',
+                welcomePrefix: 'Welcome, ',
+                sidebarDash: 'Dashboard',
+                sidebarRooms: 'Rooms',
+                sidebarBookings: 'Bookings',
+                sidebarCustomers: 'Customers',
+                sidebarStaff: 'Staff',
+                logout: 'Logout',
+                feedCheckin: 'checked in',
+                feedCheckout: 'checked out',
+                feedConfirmed: 'new booking'
+            }
+        };
+
+        function t(key) { return T[currentLang][key] || key; }
+
+        function applyLang() {
+            var lang = currentLang;
+            document.documentElement.lang = lang;
+            document.getElementById('lang-btn').textContent = t('langBtn');
+            var el = function(id) { return document.getElementById(id); };
+            if (el('lbl-dashboard-title')) el('lbl-dashboard-title').textContent = t('dashTitle');
+            if (el('lbl-live')) el('lbl-live').textContent = t('live');
+            if (el('lbl-total-rooms')) el('lbl-total-rooms').textContent = t('totalRooms');
+            if (el('lbl-available')) el('lbl-available').textContent = t('available');
+            if (el('lbl-occupied')) el('lbl-occupied').textContent = t('occupied');
+            if (el('lbl-occupancy')) el('lbl-occupancy').textContent = t('occupancy');
+            if (el('lbl-total-bookings')) el('lbl-total-bookings').textContent = t('totalBookings');
+            if (el('lbl-active-bookings')) el('lbl-active-bookings').textContent = t('activeBookings');
+            if (el('lbl-revenue')) el('lbl-revenue').textContent = t('revenue');
+            if (el('lbl-maintenance')) el('lbl-maintenance').textContent = t('maintenance');
+            if (el('lbl-checkins-today')) el('lbl-checkins-today').textContent = t('checkinsToday');
+            if (el('lbl-checkouts-today')) el('lbl-checkouts-today').textContent = t('checkoutsToday');
+            if (el('lbl-live-feed')) el('lbl-live-feed').textContent = t('liveFeed');
+            if (el('lbl-your-balance')) el('lbl-your-balance').textContent = t('yourBalance');
+            if (el('lbl-customer-sub')) el('lbl-customer-sub').textContent = t('customerSub');
+            if (el('lbl-upgrade-title')) el('lbl-upgrade-title').textContent = t('upgradeTitle');
+            if (el('lbl-upgrade-sub')) el('lbl-upgrade-sub').textContent = t('upgradeSub');
+            loadSidebar('dashboard');
+        }
+
+        function toggleLang() {
+            currentLang = currentLang === 'de' ? 'en' : 'de';
+            localStorage.setItem('lang', currentLang);
+            applyLang();
+            if (user.role === 'customer') {
+                loadCustomerDashboard();
+            } else {
+                loadAdminDashboard();
+            }
+        }
+
+        loadSidebar('dashboard');
+        applyLang();
+
+        if (user.role === 'customer') {
+            document.getElementById('customer-dashboard').style.display = 'block';
+            document.getElementById('customer-greeting').textContent = t('welcomePrefix') + user.name;
+            loadCustomerDashboard();
+        } else {
+            document.getElementById('admin-dashboard').style.display = 'block';
+            document.getElementById('welcome-text').textContent = t('welcomePrefix') + user.name;
+            loadAdminDashboard();
+            startLiveFeed();
+        }
+
+        // ===== ADMIN DASHBOARD =====
+        async function loadAdminDashboard() {
+            try {
+                var data = await apiRequest('/api/bookings/stats');
+                document.getElementById('total-rooms').textContent = data.totalRooms;
+                document.getElementById('available-rooms').textContent = data.availableRooms;
+                document.getElementById('occupied-rooms').textContent = data.occupiedRooms;
+                document.getElementById('occupancy-rate').textContent = data.occupancyRate + '%';
+                document.getElementById('total-bookings').textContent = data.totalBookings;
+                document.getElementById('active-bookings').textContent = data.activeBookings;
+                document.getElementById('total-revenue').textContent = '$' + data.totalRevenue.toLocaleString();
+                document.getElementById('maintenance-rooms').textContent = data.maintenanceRooms;
+
+                var ciList = document.getElementById('today-checkins');
+                if (data.todayCheckIns && data.todayCheckIns.length > 0) {
+                    ciList.innerHTML = data.todayCheckIns.map(function(b) {
+                        return '<li><span class="feed-icon">&#9989;</span>' +
+                            '<span>' + t('room') + ' ' + b.room.number + ' &mdash; ' + b.customer.name + '</span>' +
+                            '</li>';
+                    }).join('');
+                } else {
+                    ciList.innerHTML = '<li><span class="no-data">' + t('noCheckins') + '</span></li>';
+                }
+
+                var coList = document.getElementById('today-checkouts');
+                if (data.todayCheckOuts && data.todayCheckOuts.length > 0) {
+                    coList.innerHTML = data.todayCheckOuts.map(function(b) {
+                        return '<li><span class="feed-icon">&#128179;</span>' +
+                            '<span>' + t('room') + ' ' + b.room.number + ' &mdash; ' + b.customer.name + '</span>' +
+                            '</li>';
+                    }).join('');
+                } else {
+                    coList.innerHTML = '<li><span class="no-data">' + t('noCheckouts') + '</span></li>';
+                }
+            } catch (err) {
+                showAlert('Dashboard-Daten konnten nicht geladen werden', 'error');
+            }
+        }
+
+        // ===== LIVE FEED TICKER =====
+        var feedNames = ['Alice Johnson','Bob Smith','Maria Schmidt','Hans Mueller','Sophie Laurent',
+            'Marco Rossi','Emma Wilson','Yuki Tanaka','Carlos Garcia','Lena Braun','David Kim','Fatima Al-Hassan'];
+        var feedRooms = ['101','102','103','201','202','203','301','401','402'];
+        var feedActions = ['checkin','checkout','confirmed'];
+        var feedIcons = { checkin: '&#9989;', checkout: '&#128179;', confirmed: '&#128203;' };
+        var feedLog = [];
+
+        function getRandomItem(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+
+        function nowTime() {
+            var d = new Date();
+            return d.getHours().toString().padStart(2,'0') + ':' + d.getMinutes().toString().padStart(2,'0');
+        }
+
+        function addFeedItem() {
+            var action = getRandomItem(feedActions);
+            var name = getRandomItem(feedNames);
+            var room = getRandomItem(feedRooms);
+            var actionLabel = action === 'checkin' ? t('feedCheckin') : action === 'checkout' ? t('feedCheckout') : t('feedConfirmed');
+            var icon = feedIcons[action];
+
+            var item = {
+                icon: icon,
+                text: name + ' &mdash; ' + t('room') + ' ' + room + ' (' + actionLabel + ')',
+                time: nowTime()
+            };
+            feedLog.unshift(item);
+            if (feedLog.length > 8) feedLog.pop();
+
+            var feed = document.getElementById('live-feed');
+            if (feed) {
+                feed.innerHTML = feedLog.map(function(f) {
+                    return '<li><span class="feed-icon">' + f.icon + '</span>' +
+                        '<span>' + f.text + '</span>' +
+                        '<span class="feed-time">' + f.time + '</span></li>';
+                }).join('');
+            }
+        }
+
+        function startLiveFeed() {
+            addFeedItem();
+            addFeedItem();
+            setTimeout(function() {
+                addFeedItem();
+                setInterval(addFeedItem, 8000);
+            }, 3000);
+        }
+
+        // ===== CUSTOMER DASHBOARD =====
+        async function loadCustomerDashboard() {
+            document.getElementById('customer-greeting').textContent = t('welcomePrefix') + user.name;
+            document.getElementById('lbl-customer-sub').textContent = t('customerSub');
+
+            try {
+                var profile = await apiRequest('/api/customers/me');
+                customerBalance = profile.balance || 0;
+                document.getElementById('customer-balance').textContent = '$' + customerBalance.toLocaleString();
+            } catch (e) { }
+
+            try {
+                var bookings = await apiRequest('/api/bookings');
+                var container = document.getElementById('customer-bookings');
+
+                if (bookings.length === 0) {
+                    container.innerHTML = '<div class="booking-card"><div class="booking-card-body">' +
+                        '<p class="no-data">' + t('noBookings') + '</p></div></div>';
+                } else {
+                    var html = '';
+                    for (var i = 0; i < bookings.length; i++) {
+                        var b = bookings[i];
+                        var isActive = (b.status === 'Confirmed' || b.status === 'Checked-in');
+                        if (isActive && !activeBookingId) {
+                            activeBookingId = b._id;
+                            activeBookingRoomId = b.room ? b.room._id : null;
+                            activeBookingNights = Math.ceil((new Date(b.checkOut) - new Date(b.checkIn)) / 86400000);
+                        }
+                        var sBadge = 'badge-blue';
+                        if (b.status === 'Checked-in') sBadge = 'badge-green';
+                        if (b.status === 'Checked-out') sBadge = 'badge-gray';
+                        if (b.status === 'Cancelled') sBadge = 'badge-red';
+                        var sText = b.status;
+                        if (b.status === 'Confirmed') sText = t('confirmed');
+                        if (b.status === 'Checked-in') sText = t('checkedIn');
+                        if (b.status === 'Checked-out') sText = t('checkedOut');
+                        if (b.status === 'Cancelled') sText = t('cancelled');
+
+                        var featHtml = '';
+                        if (b.room && b.room.features) {
+                            featHtml = b.room.features.map(function(f) {
+                                return '<span class="feature-tag">' + f + '</span>';
+                            }).join('');
+                        }
+
+                        html += '<div class="booking-card">' +
+                            '<div class="booking-card-header">' +
+                                '<h3>' + t('room') + ' ' + (b.room ? b.room.number : 'N/A') + ' &mdash; ' + (b.room ? b.room.type : '') + '</h3>' +
+                                '<span class="badge ' + sBadge + '">' + sText + '</span>' +
+                            '</div>' +
+                            '<div class="booking-card-body">' +
+                                '<div class="booking-info-grid">' +
+                                    '<div class="booking-info-item"><span class="info-label">' + t('checkin') + '</span><span class="info-value">' + formatDate(b.checkIn) + '</span></div>' +
+                                    '<div class="booking-info-item"><span class="info-label">' + t('checkout') + '</span><span class="info-value">' + formatDate(b.checkOut) + '</span></div>' +
+                                    '<div class="booking-info-item"><span class="info-label">' + t('total') + '</span><span class="info-value">$' + b.totalPrice + '</span></div>' +
+                                    '<div class="booking-info-item"><span class="info-label">' + t('payment') + '</span><span class="info-value">' + b.paymentStatus + '</span></div>' +
+                                '</div>' +
+                                '<div style="margin-top:10px;"><span class="info-label">' + t('features') + '</span>' +
+                                    '<div class="room-features">' + (featHtml || '<span style="color:#999">' + t('noFeatures') + '</span>') + '</div>' +
+                                '</div>' +
+                            '</div>' +
+                        '</div>';
+                    }
+                    container.innerHTML = html;
+                }
+
+                loadUpgradeOptions();
+            } catch (err) {
+                showAlert('Buchungen konnten nicht geladen werden', 'error');
+            }
+        }
+
+        async function loadUpgradeOptions() {
+            try {
+                var rooms = await apiRequest('/api/rooms?status=Available');
+                var container = document.getElementById('upgrade-cards');
+
+                if (rooms.length === 0) {
+                    container.innerHTML = '<p class="no-data">' + t('noRooms') + '</p>';
+                    return;
+                }
+
+                var html = '';
+                for (var i = 0; i < rooms.length; i++) {
+                    var r = rooms[i];
+                    var isCurrent = (r._id === activeBookingRoomId);
+                    var nights = activeBookingNights || 1;
+                    var cost = nights * r.price;
+                    var diff = activeBookingId ? (cost - (nights * (r.price))) : 0;
+                    var canAfford = customerBalance >= 0;
+                    var btnLabel = isCurrent ? t('currentRoom') : t('upgradeBtn');
+                    var costNote = activeBookingId
+                        ? (t('costNote') + cost + ' (' + nights + ' N\u00e4chte)')
+                        : '';
+
+                    html += '<div class="upgrade-card' + (isCurrent ? ' current-room' : '') + '">' +
+                        '<h4>' + r.type + '</h4>' +
+                        '<div class="upgrade-price">$' + r.price + ' <small>' + t('perNight') + '</small></div>' +
+                        '<div class="upgrade-features">' + t('room') + ' ' + r.number + '<br>' + r.features.join(', ') + '</div>' +
+                        (costNote ? '<div class="upgrade-cost-note">' + costNote + '</div>' : '') +
+                        '<button class="btn-upgrade" ' +
+                            (isCurrent ? 'disabled' : '') +
+                            ' onclick="doUpgrade(\'' + r._id + '\',' + cost + ')">' +
+                            btnLabel +
+                        '</button>' +
+                    '</div>';
+                }
+                container.innerHTML = html;
+            } catch (err) {
+                document.getElementById('upgrade-cards').innerHTML = '<p class="no-data">Fehler beim Laden</p>';
+            }
+        }
+
+        async function doUpgrade(newRoomId, cost) {
+            if (!activeBookingId) {
+                showAlert('Keine aktive Buchung f\u00fcr Upgrade', 'error');
+                return;
+            }
+            if (customerBalance < cost) {
+                showAlert(t('notEnough') + ' ($' + customerBalance + ' < $' + cost + ')', 'error');
+                return;
+            }
+            try {
+                var res = await apiRequest('/api/customers/upgrade', 'POST', {
+                    bookingId: activeBookingId,
+                    newRoomId: newRoomId
+                });
+                customerBalance = res.newBalance;
+                document.getElementById('customer-balance').textContent = '$' + customerBalance.toLocaleString();
+                activeBookingRoomId = newRoomId;
+                showAlert(t('upgradeSuccess') + ' ' + t('newBalance') + customerBalance, 'success');
+                activeBookingId = null;
+                loadCustomerDashboard();
+            } catch (err) {
+                showAlert(err.message || 'Upgrade fehlgeschlagen', 'error');
+            }
+        }
+    </script>
+</body>
+</html>

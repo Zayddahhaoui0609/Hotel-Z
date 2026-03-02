@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kunden - Zayd Hotel</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <button class="lang-switcher" onclick="toggleLang()">EN</button>
+    <div class="app-container">
+        <nav class="sidebar" id="sidebar"></nav>
+
+        <div class="main-content">
+            <div class="page-header">
+                <h1>Kundenverwaltung</h1>
+            </div>
+
+            <div id="alert-box"></div>
+
+            <!-- Customers Table -->
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>E-Mail</th>
+                            <th>Telefon</th>
+                            <th>Ausweis/Pass</th>
+                            <th>Registriert</th>
+                            <th>Aktionen</th>
+                        </tr>
+                    </thead>
+                    <tbody id="customers-table">
+                        <tr><td colspan="6" class="no-data">Kunden werden geladen...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Customer Modal -->
+    <div class="modal-overlay" id="customer-modal">
+        <div class="modal">
+            <div class="modal-header">
+                <h2>Kunde bearbeiten</h2>
+                <button class="modal-close" onclick="closeModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="customer-form">
+                    <input type="hidden" id="customer-id">
+                    <div class="form-group">
+                        <label for="customer-name">Vollst&auml;ndiger Name</label>
+                        <input type="text" id="customer-name" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="customer-email">E-Mail</label>
+                        <input type="email" id="customer-email" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="customer-phone">Telefon</label>
+                        <input type="text" id="customer-phone">
+                    </div>
+                    <div class="form-group">
+                        <label for="customer-idnum">Ausweis- / Passnummer</label>
+                        <input type="text" id="customer-idnum">
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal()">Abbrechen</button>
+                <button class="btn btn-primary" onclick="saveCustomer()">Speichern</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Booking History Modal -->
+    <div class="modal-overlay" id="history-modal">
+        <div class="modal" style="max-width:700px;">
+            <div class="modal-header">
+                <h2 id="history-title">Buchungsverlauf</h2>
+                <button class="modal-close" onclick="closeHistoryModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Zimmer</th>
+                            <th>Check-in</th>
+                            <th>Check-out</th>
+                            <th>Gesamt</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="history-table">
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script src="/js/main.js"></script>
+    <script>
+        requireAuth(['admin', 'staff']);
+        loadSidebar('customers');
+
+        const user = JSON.parse(localStorage.getItem('user'));
+
+        async function loadCustomers() {
+            try {
+                const customers = await apiRequest('/api/customers');
+                const tbody = document.getElementById('customers-table');
+
+                if (customers.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="6" class="no-data">Keine Kunden gefunden</td></tr>';
+                    return;
+                }
+
+                tbody.innerHTML = customers.map(function(c) {
+                    let actions = '<button class="btn btn-primary btn-sm" onclick="viewHistory(\'' + c._id + '\', \'' + c.name + '\')">Verlauf</button> ';
+                    actions += '<button class="btn btn-warning btn-sm" onclick="editCustomer(\'' + c._id + '\')">Bearbeiten</button> ';
+                    if (user.role === 'admin') {
+                        actions += '<button class="btn btn-danger btn-sm" onclick="deleteCustomer(\'' + c._id + '\')">L\u00f6schen</button>';
+                    }
+
+                    return '<tr>' +
+                        '<td>' + c.name + '</td>' +
+                        '<td>' + c.email + '</td>' +
+                        '<td>' + (c.phone || '-') + '</td>' +
+                        '<td>' + (c.idNumber || '-') + '</td>' +
+                        '<td>' + formatDate(c.createdAt) + '</td>' +
+                        '<td class="actions-cell">' + actions + '</td>' +
+                    '</tr>';
+                }).join('');
+            } catch (err) {
+                showAlert('Kunden konnten nicht geladen werden', 'error');
+            }
+        }
+
+        async function editCustomer(id) {
+            try {
+                const data = await apiRequest('/api/customers/' + id);
+                const c = data.customer;
+                document.getElementById('customer-id').value = c._id;
+                document.getElementById('customer-name').value = c.name;
+                document.getElementById('customer-email').value = c.email;
+                document.getElementById('customer-phone').value = c.phone || '';
+                document.getElementById('customer-idnum').value = c.idNumber || '';
+                document.getElementById('customer-modal').classList.add('show');
+            } catch (err) {
+                showAlert('Kunde konnte nicht geladen werden', 'error');
+            }
+        }
+
+        async function saveCustomer() {
+            const id = document.getElementById('customer-id').value;
+            const name = document.getElementById('customer-name').value;
+            const email = document.getElementById('customer-email').value;
+            const phone = document.getElementById('customer-phone').value;
+            const idNumber = document.getElementById('customer-idnum').value;
+
+            try {
+                await apiRequest('/api/customers/' + id, 'PUT', { name, email, phone, idNumber });
+                showAlert('Kunde aktualisiert', 'success');
+                closeModal();
+                loadCustomers();
+            } catch (err) {
+                showAlert(err.message || 'Kunde konnte nicht aktualisiert werden', 'error');
+            }
+        }
+
+        async function deleteCustomer(id) {
+            if (!confirm('Sind Sie sicher, dass Sie diesen Kunden l\u00f6schen m\u00f6chten?')) return;
+            try {
+                await apiRequest('/api/customers/' + id, 'DELETE');
+                showAlert('Kunde gel\u00f6scht', 'success');
+                loadCustomers();
+            } catch (err) {
+                showAlert('Kunde konnte nicht gel\u00f6scht werden', 'error');
+            }
+        }
+
+        async function viewHistory(id, name) {
+            try {
+                const data = await apiRequest('/api/customers/' + id);
+                document.getElementById('history-title').textContent = name + ' - Buchungsverlauf';
+                const tbody = document.getElementById('history-table');
+
+                if (data.bookings.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="5" class="no-data">Keine Buchungen gefunden</td></tr>';
+                } else {
+                    tbody.innerHTML = data.bookings.map(function(b) {
+                        let statusBadge = 'badge-blue';
+                        if (b.status === 'Checked-in') statusBadge = 'badge-green';
+                        if (b.status === 'Checked-out') statusBadge = 'badge-gray';
+                        if (b.status === 'Cancelled') statusBadge = 'badge-red';
+
+                        return '<tr>' +
+                            '<td>' + (b.room ? b.room.number + ' (' + b.room.type + ')' : 'N/A') + '</td>' +
+                            '<td>' + formatDate(b.checkIn) + '</td>' +
+                            '<td>' + formatDate(b.checkOut) + '</td>' +
+                            '<td>$' + b.totalPrice + '</td>' +
+                            '<td><span class="badge ' + statusBadge + '">' + b.status + '</span></td>' +
+                        '</tr>';
+                    }).join('');
+                }
+
+                document.getElementById('history-modal').classList.add('show');
+            } catch (err) {
+                showAlert('Buchungsverlauf konnte nicht geladen werden', 'error');
+            }
+        }
+
+        function closeModal() {
+            document.getElementById('customer-modal').classList.remove('show');
+        }
+
+        function closeHistoryModal() {
+            document.getElementById('history-modal').classList.remove('show');
+        }
+
+        loadCustomers();
+    </script>
+</body>
+</html>
