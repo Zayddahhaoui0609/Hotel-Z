@@ -11,6 +11,25 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
+// MongoDB connection (cached for serverless)
+let isConnected = false;
+async function connectDB() {
+    if (isConnected) return;
+    try {
+        await mongoose.connect(process.env.MONGO_URI);
+        isConnected = true;
+        console.log('Connected to MongoDB');
+    } catch (err) {
+        console.error('MongoDB connection error:', err);
+    }
+}
+
+// Connect before every request (fast if already connected)
+app.use(async function(req, res, next) {
+    await connectDB();
+    next();
+});
+
 // Routes
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/rooms', require('./routes/rooms'));
@@ -23,16 +42,15 @@ app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-// Connect to MongoDB and start server
-const PORT = process.env.PORT || 5000;
-
-mongoose.connect(process.env.MONGO_URI)
-    .then(() => {
-        console.log('Connected to MongoDB');
+// Start server only when running locally (not on Vercel)
+if (process.env.VERCEL !== '1') {
+    const PORT = process.env.PORT || 5000;
+    connectDB().then(() => {
         app.listen(PORT, () => {
-            console.log(`Server running on port ${PORT}`);
+            console.log('Server running on port ' + PORT);
         });
-    })
-    .catch(err => {
-        console.error('MongoDB connection error:', err);
     });
+}
+
+// Export for Vercel serverless
+module.exports = app;
