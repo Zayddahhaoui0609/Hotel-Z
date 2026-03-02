@@ -14,19 +14,26 @@ app.use(express.static(path.join(__dirname, 'public')));
 // MongoDB connection (cached for serverless)
 let isConnected = false;
 async function connectDB() {
-    if (isConnected) return;
+    if (isConnected && mongoose.connection.readyState === 1) return true;
     try {
-        await mongoose.connect(process.env.MONGO_URI);
+        await mongoose.connect(process.env.MONGO_URI, {
+            serverSelectionTimeoutMS: 8000,
+            socketTimeoutMS: 8000,
+            connectTimeoutMS: 8000
+        });
         isConnected = true;
         console.log('Connected to MongoDB');
+        return true;
     } catch (err) {
-        console.error('MongoDB connection error:', err);
+        console.error('MongoDB connection error:', err.message);
+        return false;
     }
 }
 
-// Connect before every request (fast if already connected)
-app.use(async function(req, res, next) {
-    await connectDB();
+// Connect before API requests only (skip static files)
+app.use('/api', async function(req, res, next) {
+    const ok = await connectDB();
+    if (!ok) return res.status(503).json({ message: 'Database unavailable. Please try again.' });
     next();
 });
 
